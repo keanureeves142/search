@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search</title>
+</head>
+<body>
+    <h1>Search Page</h1>
+    <div>
+        <form method="POST">
+            <button type="button" onclick="generateIndex()">Generate Index</button>   
+        </form>
+        <div id="generateIndex"></div>
+    </div>
+</br>
+    <form method="POST">
+    {% csrf_token %}
+    
+    <input type="text" id="search-query" placeholder="Enter search query" value="we want 5 glasses of water">
+    <div>
+        <label><input type="checkbox" id="normalize" checked> Normalize</label>
+        <label><input type="checkbox" id="stemming"> Stemming</label>
+        <label><input type="checkbox" id="lemmatization"> Lemmatization</label>
+        <label><input type="checkbox" id="stopwords"> Stopwords Removal</label>
+        <label><input type="checkbox" id="fuzzy"> Fuzzy Matching</label>
+    </div>
+        <!-- Other fields -->
+    </form>
+    <button type="button" onclick="performSearch()">Search</button>
+    <div id="debug-info"></div>
+    <div id="results"></div>
+
+    <script>
+        function getCSRFToken() {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.startsWith('csrftoken=')) {
+                    return cookie.substring('csrftoken='.length, cookie.length);
+                }
+            }
+            return null;
+        }
+
+        function performSearch() {
+            const query = document.getElementById('search-query').value;
+            const features = [];
+            
+            if (document.getElementById('normalize').checked) features.push('normalize');
+            //if (document.getElementById('tokenize').checked) features.push('tokenize');
+            features.push('tokenize');
+            if (document.getElementById('stemming').checked) features.push('stemming');
+            if (document.getElementById('lemmatization').checked) features.push('lemmatization');
+            if (document.getElementById('stopwords').checked) features.push('stopwords');
+            if (document.getElementById('fuzzy').checked) features.push('fuzzy');
+
+            const csrfToken = getCSRFToken();
+
+            fetch('/look/search/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken // Add CSRF token here
+                },
+                body: JSON.stringify({ query, features })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = '';
+                data.results.forEach(item => {
+                    const div = document.createElement('ul');
+                    div.innerHTML = `<li><b>${item.id}</b></br>${item.name}</br>${item.category}</br>$${item.price} - ${item.rating} stars</li>`;
+                    resultsDiv.appendChild(div);
+                });
+
+                const tokensDiv = document.getElementById('debug-info');
+                tokensDiv.innerHTML = '';
+                tokensDiv.innerHTML = `<strong>Query Tokens:</strong> ${data.query_tokens.join(', ')}`;
+                tokensDiv.appendChild(tokensDiv);
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function generateIndex() {
+            const csrfToken = getCSRFToken();
+
+            fetch('/look/save_index/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken // Add CSRF token here
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // If response is not OK, throw an error to catch block
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const messageDiv = document.getElementById('generateIndex');
+                messageDiv.innerHTML = '';
+
+                if (data.status === 'success') {
+                    messageDiv.innerHTML = `<strong>Success:</strong> ${data.message}`;
+                } else {
+                    messageDiv.innerHTML = `<strong>Error:</strong> ${data.message}`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                const messageDiv = document.getElementById('generateIndex');
+                messageDiv.innerHTML = `<strong>Error:</strong> An error occurred while saving the index.`;
+            });
+        }
+    </script>
+</body>
+</html>

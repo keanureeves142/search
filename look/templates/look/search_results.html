@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results</title>
+    <style>
+        mark {
+            background-color: yellow;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Search Results</h1>
+    <form method="get" action="{% url 'search_product' %}">
+        <input type="text" name="q" value="{{ query }}" placeholder="Search by Product ID, Name, or Category">
+        <button type="submit">Search</button>
+    </form>
+
+    <ul>
+        {% if results %}
+            {% for product in results %}
+                <li>
+                    <strong>{{ product.product_id }}</strong>: 
+                    <span>{{ product.highlighted_name }}</span> - ₹{{ product.discounted_price }} <br>
+                    <em>Category:</em> <span>{{ product.highlighted_category }}</span>
+                </li>
+            {% endfor %}
+        {% else %}
+            <li>No results found.</li>
+        {% endif %}
+    </ul>
+</body>
+</html>
